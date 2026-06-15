@@ -1,0 +1,19 @@
+# .htaccess
+RewriteEngine On
+RewriteBase /barres_698/
+
+# Prevent directory listing
+Options -Indexes
+
+# Error pages
+ErrorDocument 404 /barres_698/404.php
+ErrorDocument 403 /barres_698/403.php
+
+# Protect includes folder
+RewriteRule ^includes/ - [F,L]
+
+# Protect sensitive files
+<FilesMatch "\.(sql|log|ini)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
