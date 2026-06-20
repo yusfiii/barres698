@@ -1,4 +1,5 @@
 <?php
+// heatmap/pengaturan.php
 require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/session.php';
 require_once __DIR__ . '/../../includes/functions.php';
@@ -78,12 +79,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
+        /* ... semua style tetap sama ... */
         * {
             margin: 0;
             padding: 0;
@@ -103,7 +102,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             min-height: 100vh;
         }
 
-        /* Top Navbar */
         .top-navbar {
             background: #FFFFFF;
             border: 1px solid rgba(0, 0, 0, 0.08);
@@ -215,7 +213,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             border-color: #E0E0E0;
         }
 
-        /* Stats Cards */
         .stat-card {
             background: #FFFFFF;
             border: 1px solid rgba(0, 0, 0, 0.08);
@@ -258,7 +255,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             color: #666;
         }
 
-        /* Cards */
         .card-custom {
             background: #FFFFFF;
             border: 1px solid rgba(0, 0, 0, 0.08);
@@ -286,7 +282,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             color: #F7B801;
         }
 
-        /* Buttons */
         .btn-gold {
             background: linear-gradient(135deg, #F7B801, #E5A800);
             border: none;
@@ -336,7 +331,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             color: #F7B801;
         }
 
-        /* Map Container */
         .map-container {
             height: 450px;
             width: 100%;
@@ -349,7 +343,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             width: 100%;
         }
 
-        /* Slider Group */
         .slider-group {
             padding: 18px;
             border-radius: 14px;
@@ -403,7 +396,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             transform: scale(1.15);
         }
 
-        /* Info Box */
         .info-box {
             border-radius: 14px;
             padding: 15px;
@@ -425,7 +417,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             color: #666;
         }
 
-        /* Legend */
         .gradient-preview {
             height: 8px;
             border-radius: 4px;
@@ -447,7 +438,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             border-radius: 4px;
         }
 
-        /* Table */
         .table-custom {
             width: 100%;
             margin-bottom: 0;
@@ -497,7 +487,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             color: #B8860B;
         }
 
-        /* Alert */
         .alert-custom {
             border-radius: 14px;
             padding: 14px 18px;
@@ -531,7 +520,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
 
-        /* Preview Overlay */
         .preview-overlay {
             position: absolute;
             top: 0;
@@ -556,7 +544,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             margin: 20px 0;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0;
@@ -596,7 +583,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         </div>
 
         <div class="dropdown-menu-custom" id="dropdownMenu">
-            <a href="../../logout.php">
+            <a href="../logout.php">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>Logout</span>
             </a>
@@ -876,10 +863,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         </div>
     </div>
 
+    <!-- ============================================ -->
+    <!-- SCRIPTS - URUTAN PENTING! -->
+    <!-- ============================================ -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 1. Leaflet JS dulu -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- 2. Baru Leaflet.heat -->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 
     <script>
+        // ============================================
+        // CEK APAKAH L.heatLayer TERSEDIA
+        // ============================================
+        console.log('Leaflet version:', L.version);
+        console.log('L.heatLayer available:', typeof L.heatLayer !== 'undefined');
+
+        // ============================================
+        // INITIALIZATION & VARIABLES
+        // ============================================
+
         // Initialize map
         const map = L.map('heatmapPreview').setView([-3.468, 114.832], 12);
 
@@ -889,107 +895,243 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             maxZoom: 19
         }).addTo(map);
 
-        let heatmapLayer = null;
+        let kdeHeatmapLayer = null;
         let markers = [];
+        let kdeData = null;
 
         // Data kejadian dari PHP
         const kejadianData = <?php
-                                if ($kejadian && $kejadian->num_rows > 0) {
-                                    mysqli_data_seek($kejadian, 0);
-                                    $data = [];
-                                    while ($row = $kejadian->fetch_assoc()) {
-                                        if ($row['latitude'] && $row['longitude']) {
-                                            $data[] = [
-                                                'lat' => (float)$row['latitude'],
-                                                'lng' => (float)$row['longitude'],
-                                                'waktu' => $row['waktu'],
-                                                'alamat' => $row['alamat'],
-                                                'kecamatan' => $row['kecamatan']
-                                            ];
-                                        }
-                                    }
-                                    echo json_encode($data);
-                                } else {
-                                    echo '[]';
-                                }
-                                ?>;
-
-        // Initialize heatmap
-        function initHeatmap(radius, blur, intensity) {
-            if (heatmapLayer) {
-                map.removeLayer(heatmapLayer);
-            }
-            markers.forEach(m => map.removeLayer(m));
-            markers = [];
-
-            if (kejadianData.length === 0) return;
-
-            // Add markers with gold accent
-            kejadianData.forEach(data => {
-                const marker = L.circleMarker([data.lat, data.lng], {
-                    radius: 5,
-                    fillColor: '#F7B801',
-                    color: '#FFFFFF',
-                    weight: 1.5,
-                    fillOpacity: 0.8
-                }).bindPopup(`
-                    <div style="font-family: 'Poppins', sans-serif;">
-                        <strong style="color: #F7B801;">Kejadian Kebakaran</strong><br>
-                        <small>${new Date(data.waktu).toLocaleString('id-ID')}</small><br>
-                        ${data.alamat ? (data.alamat.substring(0, 80) + (data.alamat.length > 80 ? '...' : '')) : '-'}<br>
-                        <em>${data.kecamatan || '-'}</em>
-                    </div>
-                `);
-                marker.addTo(map);
-                markers.push(marker);
-            });
-
-            // Heatmap data
-            const heatData = kejadianData.map(d => [d.lat, d.lng, 1]);
-
-            // Adjust max value based on intensity
-            const maxVal = Math.max(1.2, 1.5 * (70 / intensity));
-
-            // Create heatmap with gold gradient
-            heatmapLayer = L.heatLayer(heatData, {
-                radius: radius,
-                blur: blur,
-                maxZoom: 18,
-                max: maxVal,
-                gradient: {
-                    0.2: '#00cc44',
-                    0.5: '#ffcc00',
-                    0.8: '#ff6600',
-                    1.0: '#ff3300'
+            if ($kejadian && $kejadian->num_rows > 0) {
+                mysqli_data_seek($kejadian, 0);
+                $data = [];
+                while ($row = $kejadian->fetch_assoc()) {
+                    if ($row['latitude'] && $row['longitude']) {
+                        $data[] = [
+                            'lat' => (float)$row['latitude'],
+                            'lng' => (float)$row['longitude'],
+                            'waktu' => $row['waktu'],
+                            'alamat' => $row['alamat'],
+                            'kecamatan' => $row['kecamatan']
+                        ];
+                    }
                 }
-            }).addTo(map);
+                echo json_encode($data);
+            } else {
+                echo '[]';
+            }
+        ?>;
+
+        // ============================================
+        // CORE KDE FUNCTIONS
+        // ============================================
+
+        function calculateStdDev(array) {
+            const n = array.length;
+            if (n < 2) return 0;
+            const mean = array.reduce((a, b) => a + b, 0) / n;
+            const variance = array.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n;
+            return Math.sqrt(variance);
         }
 
-        // Update slider displays
+        function euclideanDistance(lat1, lng1, lat2, lng2) {
+            return Math.sqrt(Math.pow(lat1 - lat2, 2) + Math.pow(lng1 - lng2, 2));
+        }
+
+        function gaussianKernel(distance, bandwidth) {
+            const sigma = bandwidth / 2.0;
+            if (sigma === 0) return 0;
+            return (1 / (2 * Math.PI * Math.pow(sigma, 2))) * 
+                   Math.exp(-Math.pow(distance, 2) / (2 * Math.pow(sigma, 2)));
+        }
+
+        function calculateKDE(points, lat, lng, bandwidth) {
+            let density = 0;
+            const n = points.length;
+            if (n === 0) return 0;
+
+            points.forEach(point => {
+                const distance = euclideanDistance(lat, lng, point.lat, point.lng);
+                density += gaussianKernel(distance, bandwidth);
+            });
+
+            return density / n;
+        }
+
+        function generateKDEGrid(points, bounds, gridSize, bandwidth) {
+            const grid = [];
+            const stepLat = (bounds.maxLat - bounds.minLat) / gridSize;
+            const stepLng = (bounds.maxLng - bounds.minLng) / gridSize;
+
+            let lat = bounds.minLat;
+            for (let i = 0; i < gridSize; i++) {
+                const row = [];
+                let lng = bounds.minLng;
+                for (let j = 0; j < gridSize; j++) {
+                    const density = calculateKDE(points, lat, lng, bandwidth);
+                    row.push(density);
+                    lng += stepLng;
+                }
+                grid.push(row);
+                lat += stepLat;
+            }
+
+            return grid;
+        }
+
+        function normalizeGrid(grid) {
+            const flat = grid.flat();
+            const minVal = Math.min(...flat);
+            const maxVal = Math.max(...flat);
+
+            if (maxVal === minVal) return grid.map(row => row.map(() => 0));
+
+            return grid.map(row =>
+                row.map(value => (value - minVal) / (maxVal - minVal))
+            );
+        }
+
+        function createKDEHeatmap(gridData, bounds, gridSize, radius, blur) {
+            const points = [];
+            const stepLat = (bounds.maxLat - bounds.minLat) / gridSize;
+            const stepLng = (bounds.maxLng - bounds.minLng) / gridSize;
+
+            let lat = bounds.minLat;
+            for (let i = 0; i < gridSize; i++) {
+                let lng = bounds.minLng;
+                for (let j = 0; j < gridSize; j++) {
+                    const value = gridData[i]?.[j] || 0;
+                    if (value > 0.01) {
+                        points.push([lat, lng, value]);
+                    }
+                    lng += stepLng;
+                }
+                lat += stepLat;
+            }
+
+            if (kdeHeatmapLayer) {
+                map.removeLayer(kdeHeatmapLayer);
+            }
+
+            // Gunakan L.heatLayer dengan aman
+            if (typeof L.heatLayer === 'function') {
+                kdeHeatmapLayer = L.heatLayer(points, {
+                    radius: radius || 25,
+                    blur: blur || 15,
+                    maxZoom: 18,
+                    gradient: {
+                        0.0: '#00cc44',
+                        0.2: '#88cc00',
+                        0.4: '#ffcc00',
+                        0.6: '#ff8800',
+                        0.8: '#ff4400',
+                        1.0: '#ff0000'
+                    },
+                    max: 1.0
+                }).addTo(map);
+            } else {
+                console.error('L.heatLayer tidak tersedia!');
+                showNotification('Library heatmap tidak terload dengan benar', 'error');
+            }
+        }
+
+        function initKDEHeatmap(radius, blur, intensity) {
+            const loading = document.getElementById('previewLoading');
+            if (loading) loading.classList.add('show');
+
+            try {
+                if (kejadianData.length === 0) {
+                    if (loading) loading.classList.remove('show');
+                    showNotification('Tidak ada data kejadian', 'warning');
+                    return;
+                }
+
+                const lats = kejadianData.map(d => d.lat);
+                const lngs = kejadianData.map(d => d.lng);
+                const padding = 0.02;
+
+                const bounds = {
+                    minLat: Math.min(...lats) - padding,
+                    maxLat: Math.max(...lats) + padding,
+                    minLng: Math.min(...lngs) - padding,
+                    maxLng: Math.max(...lngs) + padding
+                };
+
+                const n = kejadianData.length;
+                const stdLat = calculateStdDev(lats);
+                const stdLng = calculateStdDev(lngs);
+                const std = (stdLat + stdLng) / 2;
+                const bandwidth = 1.06 * std * Math.pow(n, -1 / 5);
+
+                const gridSize = 50;
+                const grid = generateKDEGrid(kejadianData, bounds, gridSize, bandwidth);
+                const normalizedGrid = normalizeGrid(grid);
+
+                kdeData = {
+                    grid: normalizedGrid,
+                    bounds: bounds,
+                    gridSize: gridSize,
+                    bandwidth: bandwidth,
+                    totalPoints: n
+                };
+
+                markers.forEach(m => map.removeLayer(m));
+                markers = [];
+
+                kejadianData.forEach(data => {
+                    const marker = L.circleMarker([data.lat, data.lng], {
+                        radius: 5,
+                        fillColor: '#F7B801',
+                        color: '#FFFFFF',
+                        weight: 1.5,
+                        fillOpacity: 0.8
+                    }).bindPopup(`
+                        <div style="font-family: 'Poppins', sans-serif;">
+                            <strong style="color: #F7B801;">Kejadian Kebakaran</strong><br>
+                            <small>${new Date(data.waktu).toLocaleString('id-ID')}</small><br>
+                            ${data.alamat ? (data.alamat.substring(0, 80) + (data.alamat.length > 80 ? '...' : '')) : '-'}<br>
+                            <em>${data.kecamatan || '-'}</em>
+                        </div>
+                    `);
+                    marker.addTo(map);
+                    markers.push(marker);
+                });
+
+                createKDEHeatmap(normalizedGrid, bounds, gridSize, radius, blur);
+                updateKDEStatistics(kdeData);
+
+                const latLngs = kejadianData.map(d => [d.lat, d.lng]);
+                map.fitBounds(latLngs, { padding: [50, 50] });
+
+                showNotification(
+                    `✅ KDE berhasil dimuat: ${kdeData.totalPoints} titik data, bandwidth ${kdeData.bandwidth.toFixed(6)}°`,
+                    'success'
+                );
+
+            } catch (error) {
+                console.error('KDE Error:', error);
+                showNotification('❌ Error memuat KDE: ' + error.message, 'error');
+            } finally {
+                if (loading) loading.classList.remove('show');
+            }
+        }
+
+        // ============================================
+        // UI FUNCTIONS
+        // ============================================
+
         function updateSliderDisplay() {
             document.getElementById('radiusDisplay').textContent = document.getElementById('radiusSlider').value;
             document.getElementById('blurDisplay').textContent = document.getElementById('blurSlider').value;
             document.getElementById('intensityDisplay').textContent = document.getElementById('intensitySlider').value + '%';
         }
 
-        // Preview heatmap
         function previewHeatmap() {
-            const loading = document.getElementById('previewLoading');
-            loading.classList.add('show');
-
             const radius = parseInt(document.getElementById('radiusSlider').value);
             const blur = parseInt(document.getElementById('blurSlider').value);
             const intensity = parseInt(document.getElementById('intensitySlider').value);
-
-            setTimeout(() => {
-                if (kejadianData.length > 0) {
-                    initHeatmap(radius, blur, intensity);
-                }
-                loading.classList.remove('show');
-            }, 300);
+            initKDEHeatmap(radius, blur, intensity);
         }
 
-        // Reset to default values
         function resetToDefault() {
             document.getElementById('radiusSlider').value = 25;
             document.getElementById('blurSlider').value = 15;
@@ -998,22 +1140,94 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             previewHeatmap();
         }
 
-        // Reset map view
         function resetMapView() {
             map.setView([-3.468, 114.832], 12);
         }
 
-        // Fit all markers
         function fitAllMarkers() {
             if (kejadianData.length > 0) {
                 const bounds = kejadianData.map(d => [d.lat, d.lng]);
-                map.fitBounds(bounds, {
-                    padding: [30, 30]
-                });
+                map.fitBounds(bounds, { padding: [50, 50] });
             }
         }
 
-        // Event Listeners
+        function updateKDEStatistics(data) {
+            if (!data) return;
+
+            let statsDiv = document.getElementById('kdeStats');
+            if (!statsDiv) {
+                statsDiv = document.createElement('div');
+                statsDiv.id = 'kdeStats';
+                statsDiv.className = 'info-box mt-3';
+                statsDiv.style.cssText = 'border-left-color: #F7B801;';
+
+                const container = document.querySelector('.card-body-custom');
+                if (container) {
+                    container.appendChild(statsDiv);
+                }
+            }
+
+            statsDiv.innerHTML = `
+                <h6><i class="fas fa-calculator me-1" style="color: #F7B801;"></i> Statistik KDE</h6>
+                <p style="font-size: 12px; margin-bottom: 4px;">
+                    <strong>Total Titik:</strong> ${data.totalPoints} kejadian
+                </p>
+                <p style="font-size: 12px; margin-bottom: 4px;">
+                    <strong>Bandwidth:</strong> ${data.bandwidth.toFixed(6)}°
+                </p>
+                <p style="font-size: 12px; margin-bottom: 4px;">
+                    <strong>Grid Size:</strong> ${data.gridSize}x${data.gridSize}
+                </p>
+                <p style="font-size: 12px; margin-bottom: 0;">
+                    <strong>Kernel:</strong> Gaussian 2D
+                </p>
+            `;
+        }
+
+        function showNotification(message, type = 'info') {
+            const colors = {
+                success: '#28a745',
+                warning: '#ffc107',
+                error: '#dc3545',
+                info: '#17a2b8'
+            };
+
+            let notification = document.getElementById('kdeNotification');
+            if (!notification) {
+                notification = document.createElement('div');
+                notification.id = 'kdeNotification';
+                notification.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    padding: 12px 20px;
+                    border-radius: 12px;
+                    color: white;
+                    font-family: 'Poppins', sans-serif;
+                    font-size: 13px;
+                    z-index: 9999;
+                    max-width: 400px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    animation: slideIn 0.3s ease;
+                    display: none;
+                `;
+                document.body.appendChild(notification);
+            }
+
+            notification.style.background = colors[type] || colors.info;
+            notification.textContent = message;
+            notification.style.display = 'block';
+
+            clearTimeout(notification._timeout);
+            notification._timeout = setTimeout(() => {
+                notification.style.display = 'none';
+            }, 5000);
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+
         document.getElementById('userAvatar').addEventListener('click', function(e) {
             e.stopPropagation();
             document.getElementById('dropdownMenu').classList.toggle('show');
@@ -1023,14 +1237,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             document.getElementById('dropdownMenu').classList.remove('show');
         });
 
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', () => {
+        let previewTimeout = null;
+        document.querySelectorAll('.range-slider').forEach(slider => {
+            slider.addEventListener('input', function() {
+                updateSliderDisplay();
+                clearTimeout(previewTimeout);
+                previewTimeout = setTimeout(() => {
+                    previewHeatmap();
+                }, 500);
+            });
+        });
+
+        // ============================================
+        // INITIALIZATION ON PAGE LOAD
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', function() {
             if (kejadianData.length > 0) {
-                const radius = parseInt(document.getElementById('radiusSlider').value);
-                const blur = parseInt(document.getElementById('blurSlider').value);
-                const intensity = parseInt(document.getElementById('intensitySlider').value);
-                initHeatmap(radius, blur, intensity);
-                setTimeout(() => fitAllMarkers(), 500);
+                setTimeout(() => {
+                    const radius = parseInt(document.getElementById('radiusSlider')?.value || 25);
+                    const blur = parseInt(document.getElementById('blurSlider')?.value || 15);
+                    const intensity = parseInt(document.getElementById('intensitySlider')?.value || 70);
+                    initKDEHeatmap(radius, blur, intensity);
+                }, 500);
             }
         });
     </script>

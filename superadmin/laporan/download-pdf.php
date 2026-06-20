@@ -52,14 +52,6 @@ if (!$kejadian) {
     die("Tidak ada data kejadian untuk periode ini");
 }
 
-// Fungsi untuk menampilkan detail
-function showDetail($label, $value) {
-    echo '<tr>';
-    echo '<td style="font-weight: 600; width: 180px; padding: 6px 10px; border-bottom: 1px dashed #e8e8e8;">' . $label . '</td>';
-    echo '<td style="padding: 6px 10px; border-bottom: 1px dashed #e8e8e8;">: ' . ($value ?: '-') . '</td>';
-    echo '</tr>';
-}
-
 header('Content-Type: text/html; charset=utf-8');
 ?>
 <!DOCTYPE html>
@@ -68,78 +60,90 @@ header('Content-Type: text/html; charset=utf-8');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Laporan Kejadian - BARRES 698</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: 'Poppins', sans-serif; 
-            background: white; 
-            color: #1A1A1A;
-            padding: 20px 40px;
-            font-size: 12px;
-        }
-        .container { max-width: 1000px; margin: 0 auto; }
 
-        /* Kop Surat */
-        .kop-surat {
-            border-bottom: 3px double #F7B801;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-            text-align: center;
+        body {
+            font-family: 'Arial', sans-serif !important;
+            background: white;
+            color: #000000;
+            padding: 20px 40px;
+            font-size: 11pt;
+            line-height: 1.6;
         }
-        .kop-surat .logo-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 5px;
+
+        body, table, td, div, p, span, h1, h2, h3, h4 {
+            font-family: 'Arial', sans-serif !important;
         }
-        .kop-surat .logo-placeholder {
-            width: 65px;
-            height: 65px;
-            background: #F7B801;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            color: white;
-            font-weight: 800;
-            flex-shrink: 0;
-        }
-        .kop-surat .kop-text { text-align: left; }
-        .kop-surat h1 {
-            font-size: 16px;
-            font-weight: 800;
-            color: #1A1A1A;
-            margin: 0;
-            letter-spacing: 1px;
-            line-height: 1.3;
-        }
-        .kop-surat .subtitle { font-size: 11px; color: #444; font-weight: 600; }
-        .kop-surat .address, .kop-surat .contact {
-            font-size: 10px;
-            color: #666;
-            margin: 1px 0;
-        }
+
+        .container { max-width: 100%; margin: 0 auto; }
+
+       /* ==================== KOP SURAT - LOGO DI KIRI ==================== */
+.laporan .kop-surat {
+    border-bottom: 2px solid #000000;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 15px;
+}
+
+.laporan .kop-surat .logo-wrapper {
+    flex-shrink: 0;
+}
+
+.laporan .kop-surat .logo-wrapper img {
+    height: 65px;
+    width: auto;
+    display: block;
+}
+
+.laporan .kop-surat .kop-text {
+    text-align: left;
+    flex: 1;
+}
+
+.laporan .kop-surat .kop-text .nama-organisasi {
+    font-size: 14pt;
+    font-weight: 800;
+    color: #000000;
+    margin: 0;
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+}
+
+.laporan .kop-surat .kop-text .alamat-kop {
+    font-size: 9pt;
+    color: #333333;
+    margin: 1px 0;
+    line-height: 1.4;
+}
+
+.laporan .kop-surat .kop-text .kontak-kop {
+    font-size: 9pt;
+    color: #333333;
+    margin: 1px 0;
+    line-height: 1.4;
+}
 
         /* Surat Info */
         .surat-info {
             display: flex;
             justify-content: space-between;
-            margin: 15px 0 20px 0;
-            font-size: 12px;
+            margin: 12px 0 15px 0;
+            font-size: 11pt;
         }
-        .surat-info .label { font-weight: 600; }
+
+        .surat-info .label { font-weight: 700; }
 
         /* Judul */
         .judul {
             text-align: center;
-            margin: 20px 0;
+            margin: 15px 0 15px 0;
             font-weight: 700;
-            font-size: 18px;
-            color: #1A1A1A;
+            font-size: 14pt;
+            color: #000000;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
@@ -148,72 +152,84 @@ header('Content-Type: text/html; charset=utf-8');
         .detail-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 10px 0;
+            margin: 8px 0;
         }
+
         .detail-table td {
-            padding: 6px 10px;
-            border-bottom: 1px dashed #e8e8e8;
-            font-size: 12px;
+            padding: 4px 8px;
+            border-bottom: 1px dashed #cccccc;
+            font-size: 11pt;
+            vertical-align: top;
         }
+
         .detail-table .label {
-            font-weight: 600;
+            font-weight: 700;
             width: 180px;
+            color: #000000;
         }
+
+        .detail-table .value { color: #000000; }
 
         /* Foto */
         .foto-section {
-            margin: 20px 0;
-            padding: 15px;
-            border: 1px dashed #ddd;
-            border-radius: 8px;
+            margin: 15px 0 10px 0;
+            padding: 10px;
             text-align: center;
-            min-height: 120px;
-            background: #FAFAFA;
+            min-height: 30px;
         }
-        .foto-section img { max-width: 100%; max-height: 250px; border-radius: 8px; }
-        .foto-section .no-foto { color: #999; }
-        .foto-section .no-foto i { font-size: 36px; display: block; margin-bottom: 8px; color: #ddd; }
+
+        .foto-section img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
 
         /* TTD */
         .ttd-section {
-            margin-top: 40px;
-            text-align: right;
-            padding-top: 15px;
-        }
-        .ttd-section .ttd-place { font-size: 12px; color: #555; }
-        .ttd-section .ttd-name {
-            font-weight: 600;
-            font-size: 14px;
-            color: #1A1A1A;
             margin-top: 35px;
-        }
-        .ttd-section .ttd-title { font-size: 12px; color: #666; }
-        .ttd-section .ttd-stamp {
-            margin-top: 3px;
-            font-size: 10px;
-            color: #999;
-            font-style: italic;
+            text-align: right;
+            padding-top: 5px;
         }
 
+        .ttd-section .ttd-place {
+            font-size: 11pt;
+            color: #000000;
+        }
+
+        .ttd-section .ttd-name {
+            font-weight: 700;
+            font-size: 12pt;
+            color: #000000;
+            margin-top: 30px;
+        }
+
+        .ttd-section .ttd-title {
+            font-size: 11pt;
+            color: #000000;
+        }
+
+        /* Footer */
         .footer-report {
-            margin-top: 20px;
+            margin-top: 15px;
             text-align: center;
-            font-size: 10px;
-            color: #999;
-            border-top: 1px solid #E8E8E8;
-            padding-top: 12px;
+            font-size: 9pt;
+            color: #666666;
+            border-top: 1px solid #cccccc;
+            padding-top: 10px;
         }
 
         @media print {
             body { padding: 0; margin: 0; }
-            .no-print { display: none; }
+            @page { size: A4; margin: 2cm; }
         }
 
         @media (max-width: 768px) {
             body { padding: 10px; }
             .surat-info { flex-direction: column; gap: 5px; }
-            .kop-surat .logo-container { flex-direction: column; text-align: center; }
-            .kop-surat .kop-text { text-align: center; }
+            .laporan .kop-surat-table .logo-cell { width: 60px; }
+            .laporan .kop-surat-table .logo-cell img { height: 50px; }
+            .detail-table .label { width: 120px; }
         }
     </style>
 </head>
@@ -221,81 +237,75 @@ header('Content-Type: text/html; charset=utf-8');
 
 <div class="container">
 
-    <!-- KOP SURAT -->
-    <div class="kop-surat">
-        <div class="logo-container">
-            <div class="logo-placeholder">B</div>
-            <div class="kop-text">
-                <h1>SEKRETARIAT BANJARBARU RESCUE "BARRES 698"</h1>
-                <div class="subtitle">KOTA BANJARBARU</div>
-                <div class="address">Nomor AHU-0006775.AH.01.07. Tahun 2025</div>
-                <div class="address">Jl. Zafri Zamzam II Komplek H. KA Ganie No. 06 RT. 013 RW. 003</div>
-                <div class="address">Kel. Kemuning Kec. Banjarbaru Selatan, Kota Banjarbaru</div>
-                <div class="contact">WhatsApp : 0851 868 14698 | Freq : 15.698.0 Mhz</div>
-                <div class="contact">E-mail : barres698.banjarbaru@gmail.com</div>
+    <div class="laporan">
+
+        <!-- KOP SURAT - Logo di Samping Kiri, Teks Sejajar (pakai table, bukan flexbox, agar konsisten saat print/PDF) -->
+        <!-- KOP SURAT - LOGO DI KIRI -->
+<div class="kop-surat">
+    <div class="logo-wrapper">
+        <img src="../../assets/barres2.png" alt="BARRES 698">
+    </div>
+    <div class="kop-text">
+        <div class="nama-organisasi">BANJARBARU RESCUE "BARRES 698"</div>
+        <div class="alamat-kop">Jl. Zafri Zamzam II Komplek H. KA Ganie No. 06 RT. 013 RW. 003</div>
+        <div class="alamat-kop">Kel. Kemuning Kec. Banjarbaru Selatan, Kota Banjarbaru.</div>
+        <div class="kontak-kop">WhatsApp : 0851 868 14698 / Freq : 15.698.0 Mhz</div>
+        <div class="kontak-kop">E-mail : barres698.banjarbaru@gmail.com</div>
+    </div>
+</div>
+
+        <!-- Surat Info -->
+        <div class="surat-info">
+            <div class="left">
+                <span class="label">Nomor</span> : 022/BARRES698/<?= date('m/Y', strtotime($kejadian['waktu'])) ?><br>
+                <span class="label">Lampiran</span> : 1 (satu) berkas
+            </div>
+            <div class="right">
+                Banjarbaru, <?= date('d F Y', strtotime($kejadian['waktu'])) ?>
             </div>
         </div>
-    </div>
 
-    <!-- Surat Info -->
-    <div class="surat-info">
-        <div class="left">
-            <span class="label">Nomor</span> : 022/BARRES698/<?= date('m/Y', strtotime($kejadian['waktu'])) ?><br>
-            <span class="label">Lampiran</span> : 1 (satu) berkas
-        </div>
-        <div class="right">
-            Banjarbaru, <?= date('d F Y', strtotime($kejadian['waktu'])) ?>
-        </div>
-    </div>
+        <!-- Judul -->
+        <div class="judul">LAPORAN KEJADIAN KEBAKARAN</div>
 
-    <!-- Judul -->
-    <div class="judul">LAPORAN KEJADIAN KEBAKARAN</div>
+        <!-- Detail -->
+        <table class="detail-table">
+            <tr><td class="label">Waktu Kejadian</td><td class="value">: <?= date('d/m/Y H:i', strtotime($kejadian['waktu'])) ?></td></tr>
+            <tr><td class="label">Titik Koordinat</td><td class="value">: <?= number_format($kejadian['latitude'] ?? 0, 6) ?>, <?= number_format($kejadian['longitude'] ?? 0, 6) ?></td></tr>
+            <tr><td class="label">Alamat</td><td class="value">: <?= htmlspecialchars($kejadian['alamat']) ?></td></tr>
+            <tr><td class="label">Kecamatan</td><td class="value">: <?= htmlspecialchars($kejadian['kecamatan'] ?? '-') ?></td></tr>
+            <tr><td class="label">Kelurahan</td><td class="value">: <?= htmlspecialchars($kejadian['kelurahan'] ?? '-') ?></td></tr>
+            <tr><td class="label">Bangunan Terdampak</td><td class="value">: <?= ($kejadian['jumlah_bangunan'] ?? 0) ?> unit</td></tr>
+            <tr><td class="label">Jumlah KK</td><td class="value">: <?= ($kejadian['jumlah_KK'] ?? 0) > 0 ? $kejadian['jumlah_KK'] : '-' ?></td></tr>
+            <tr><td class="label">Jumlah Individu</td><td class="value">: <?= ($kejadian['jumlah_individu'] ?? 0) > 0 ? $kejadian['jumlah_individu'] : '-' ?></td></tr>
+            <tr><td class="label">Korban Luka/Cedera</td><td class="value">: <?= ($kejadian['korban_luka'] ?? 0) ?> orang</td></tr>
+            <tr><td class="label">Korban Jiwa</td><td class="value">: <?= ($kejadian['korban_jiwa'] ?? 0) ?> orang</td></tr>
+        </table>
 
-    <!-- Detail -->
-    <table class="detail-table">
-        <?php
-        showDetail('Waktu Kejadian', date('d/m/Y H:i', strtotime($kejadian['waktu'])));
-        showDetail('Titik Koordinat', number_format($kejadian['latitude'] ?? 0, 6) . ' , ' . number_format($kejadian['longitude'] ?? 0, 6));
-        showDetail('Alamat', $kejadian['alamat']);
-        showDetail('Kecamatan', $kejadian['kecamatan'] ?? '-');
-        showDetail('Kelurahan', $kejadian['kelurahan'] ?? '-');
-        showDetail('Bangunan Terdampak', ($kejadian['jumlah_bangunan'] ?? 0) . ' unit');
-        showDetail('Jumlah KK', $kejadian['jumlah_KK'] ?? 0);
-        showDetail('Jumlah Individu', $kejadian['jumlah_individu'] ?? 0);
-        showDetail('Korban Luka/Cedera', ($kejadian['korban_luka'] ?? 0) . ' orang');
-        showDetail('Korban Jiwa', ($kejadian['korban_jiwa'] ?? 0) . ' orang');
-        ?>
-    </table>
-
-    <!-- Foto -->
-    <div class="foto-section">
+        <!-- Foto hanya jika ada -->
         <?php if ($kejadian['foto'] && file_exists('../../uploads/' . $kejadian['foto'])): ?>
-            <img src="../../uploads/<?= $kejadian['foto'] ?>" alt="Foto Kejadian">
-        <?php else: ?>
-            <div class="no-foto">
-                <i class="fas fa-camera"></i>
-                <span>Foto Jika Ada</span>
+            <div class="foto-section">
+                <img src="../../uploads/<?= $kejadian['foto'] ?>" alt="Foto Kejadian">
             </div>
         <?php endif; ?>
-    </div>
 
-    <!-- TTD -->
-    <div class="ttd-section">
-        <div class="ttd-place">Banjarbaru, <?= date('d F Y', strtotime($kejadian['waktu'])) ?></div>
-        <div class="ttd-name">Kemas Akhmad Rudi Indrajaya</div>
-        <div class="ttd-title">KETUA UMUM BARRES 698</div>
-        <div class="ttd-stamp">*Laporan ini dicetak secara elektronik dan sah tanpa tanda tangan basah</div>
-    </div>
+        <!-- TTD -->
+        <div class="ttd-section">
+            <div class="ttd-place">Banjarbaru, <?= date('d F Y', strtotime($kejadian['waktu'])) ?></div>
+            <div class="ttd-name">Kemas Akhmad Rudi Indrajaya</div>
+            <div class="ttd-title">KETUA UMUM BARRES 698</div>
+        </div>
 
-    <!-- Footer -->
-    <div class="footer-report">
-        Laporan Resmi BARRES 698 - Dicetak pada <?= date('d/m/Y H:i') ?>
+        <!-- Footer -->
+        <div class="footer-report">
+            Laporan Resmi BARRES 698 - Dicetak pada <?= date('d/m/Y H:i') ?>
+        </div>
+
     </div>
 
 </div>
 
 <script>
-    // Auto print
     window.onload = function() {
         setTimeout(function() {
             window.print();

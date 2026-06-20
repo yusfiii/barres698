@@ -1,17 +1,23 @@
 <?php
-// functions.php
-require_once 'config.php';
+// includes/functions.php
+require_once __DIR__ . '/config.php';
 
+/**
+ * SANITASI - Hanya di sini (hapus dari config.php)
+ */
 function sanitize($data) {
-    $conn = getConnection();
+    if (is_array($data)) {
+        return array_map('sanitize', $data);
+    }
     $data = trim($data);
     $data = stripslashes($data);
-    $data = htmlspecialchars($data);
-    $data = $conn->real_escape_string($data);
-    $conn->close();
+    $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
     return $data;
 }
 
+/**
+ * Flash Message
+ */
 function setFlashMessage($type, $message) {
     $_SESSION['flash'] = [
         'type' => $type,
@@ -28,7 +34,28 @@ function getFlashMessage() {
     return null;
 }
 
+function displayFlashMessage() {
+    $flash = getFlashMessage();
+    if ($flash) {
+        $type = $flash['type'];
+        $message = $flash['message'];
+        $class = $type === 'success' ? 'alert-success' : ($type === 'error' ? 'alert-danger' : 'alert-info');
+        echo "<div class='alert $class alert-dismissible fade show' role='alert'>
+                $message
+                <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
+              </div>";
+    }
+}
+
+/**
+ * Upload File
+ */
 function uploadFile($file, $target_dir = "assets/img/uploads/") {
+    // Buat direktori jika belum ada
+    if (!is_dir($target_dir)) {
+        mkdir($target_dir, 0777, true);
+    }
+    
     $target_file = $target_dir . basename($file["name"]);
     $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
     
@@ -40,25 +67,40 @@ function uploadFile($file, $target_dir = "assets/img/uploads/") {
     
     // Check file size (max 5MB)
     if ($file["size"] > 5000000) {
-        return ['success' => false, 'message' => 'Ukuran file terlalu besar'];
+        return ['success' => false, 'message' => 'Ukuran file terlalu besar (maks 5MB)'];
     }
     
     // Allow certain file formats
-    if($imageFileType != "jpg" && $imageFileType != "png" && $imageFileType != "jpeg") {
-        return ['success' => false, 'message' => 'Hanya file JPG, JPEG, PNG yang diperbolehkan'];
+    $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    if (!in_array($imageFileType, $allowed)) {
+        return ['success' => false, 'message' => 'Hanya file ' . implode(', ', $allowed) . ' yang diperbolehkan'];
     }
     
     // Generate unique filename
-    $new_filename = uniqid() . '.' . $imageFileType;
+    $new_filename = date('Ymd_His') . '_' . uniqid() . '.' . $imageFileType;
     $target_file = $target_dir . $new_filename;
     
     if (move_uploaded_file($file["tmp_name"], $target_file)) {
-        return ['success' => true, 'filename' => $new_filename];
+        return ['success' => true, 'filename' => $new_filename, 'path' => $target_file];
     } else {
         return ['success' => false, 'message' => 'Gagal mengupload file'];
     }
 }
 
+/**
+ * Delete file
+ */
+function deleteFile($filename, $target_dir = "assets/img/uploads/") {
+    $filepath = $target_dir . $filename;
+    if (file_exists($filepath)) {
+        return unlink($filepath);
+    }
+    return false;
+}
+
+/**
+ * Get Statistics
+ */
 function getStatistics() {
     $conn = getConnection();
     
@@ -66,7 +108,7 @@ function getStatistics() {
     
     // Total kejadian
     $result = $conn->query("SELECT COUNT(*) as total FROM kejadian_kebakaran");
-    $stats['total_kejadian'] = $result->fetch_assoc()['total'];
+    $stats['total_kejadian'] = $result->fetch_assoc()['total'] ?? 0;
     
     // Total korban
     $result = $conn->query("SELECT SUM(korban_luka) as luka, SUM(korban_jiwa) as jiwa FROM kejadian_kebakaran");
@@ -74,14 +116,32 @@ function getStatistics() {
     $stats['total_luka'] = $korban['luka'] ?? 0;
     $stats['total_jiwa'] = $korban['jiwa'] ?? 0;
     
+    // Total bangunan
+    $result = $conn->query("SELECT SUM(jumlah_bangunan) as total FROM kejadian_kebakaran");
+    $stats['total_bangunan'] = $result->fetch_assoc()['total'] ?? 0;
+    
+    // Total KK
+    $result = $conn->query("SELECT SUM(jumlah_KK) as total FROM kejadian_kebakaran");
+    $stats['total_kk'] = $result->fetch_assoc()['total'] ?? 0;
+    
+    // Total individu
+    $result = $conn->query("SELECT SUM(jumlah_individu) as total FROM kejadian_kebakaran");
+    $stats['total_individu'] = $result->fetch_assoc()['total'] ?? 0;
+    
     // Statistik per kecamatan
-    $result = $conn->query("SELECT kecamatan, COUNT(*) as total FROM kejadian_kebakaran GROUP BY kecamatan");
+    $result = $conn->query("
+        SELECT kecamatan, COUNT(*) as total 
+        FROM kejadian_kebakaran 
+        WHERE kecamatan IS NOT NULL 
+        GROUP BY kecamatan 
+        ORDER BY total DESC
+    ");
     $stats['per_kecamatan'] = [];
     while($row = $result->fetch_assoc()) {
         $stats['per_kecamatan'][] = $row;
     }
     
-    // Data bulanan
+    // Data bulanan (12 bulan terakhir)
     $result = $conn->query("
         SELECT DATE_FORMAT(waktu, '%Y-%m') as bulan, COUNT(*) as total 
         FROM kejadian_kebakaran 
@@ -98,85 +158,63 @@ function getStatistics() {
     return $stats;
 }
 
-function getHeatmapSettings() {
+/**
+ * Format tanggal Indonesia
+ */
+function formatTanggal($date, $format = 'd F Y H:i') {
+    $months = [
+        1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 
+        4 => 'April', 5 => 'Mei', 6 => 'Juni',
+        7 => 'Juli', 8 => 'Agustus', 9 => 'September',
+        10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+    ];
+    
+    $timestamp = strtotime($date);
+    $day = date('d', $timestamp);
+    $month = (int)date('m', $timestamp);
+    $year = date('Y', $timestamp);
+    $time = date('H:i', $timestamp);
+    
+    return $day . ' ' . $months[$month] . ' ' . $year . ' ' . $time;
+}
+
+/**
+ * Generate slug dari string
+ */
+function createSlug($string) {
+    $string = strtolower($string);
+    $string = preg_replace('/[^a-z0-9-]/', '-', $string);
+    $string = preg_replace('/-+/', '-', $string);
+    return trim($string, '-');
+}
+
+/**
+ * Get data untuk dropdown
+ */
+function getDropdownData($table, $valueField, $textField, $where = '') {
     $conn = getConnection();
-    $result = $conn->query("SELECT * FROM heatmap_settings ORDER BY id DESC LIMIT 1");
-    $settings = $result->fetch_assoc();
+    $sql = "SELECT $valueField, $textField FROM $table";
+    if ($where) {
+        $sql .= " WHERE $where";
+    }
+    $sql .= " ORDER BY $textField";
+    
+    $result = $conn->query($sql);
+    $data = [];
+    while ($row = $result->fetch_assoc()) {
+        $data[] = $row;
+    }
     $conn->close();
-    return $settings;
+    return $data;
 }
 
-// KDE Calculation Function
-function calculateKDE($points, $bandwidth = null) {
-    if (empty($points)) return [];
-    
-    // Default bandwidth using Silverman's rule of thumb
-    if (!$bandwidth) {
-        $n = count($points);
-        $stdDev = calculateStandardDeviation($points);
-        $bandwidth = 1.06 * $stdDev * pow($n, -0.2);
-    }
-    
-    $kdeValues = [];
-    
-    foreach ($points as $point) {
-        $density = 0;
-        foreach ($points as $other) {
-            $distance = calculateDistance($point, $other);
-            $density += kernelFunction($distance / $bandwidth);
-        }
-        $kdeValues[] = [
-            'lat' => $point['lat'],
-            'lng' => $point['lng'],
-            'density' => $density / (count($points) * $bandwidth)
-        ];
-    }
-    
-    return $kdeValues;
-}
-
-function kernelFunction($x) {
-    // Gaussian kernel
-    return (1 / sqrt(2 * M_PI)) * exp(-0.5 * $x * $x);
-}
-
-function calculateDistance($point1, $point2) {
-    // Haversine formula for distance in kilometers
-    $lat1 = deg2rad($point1['lat']);
-    $lat2 = deg2rad($point2['lat']);
-    $lng1 = deg2rad($point1['lng']);
-    $lng2 = deg2rad($point2['lng']);
-    
-    $dlat = $lat2 - $lat1;
-    $dlng = $lng2 - $lng1;
-    
-    $a = sin($dlat/2) * sin($dlat/2) + cos($lat1) * cos($lat2) * sin($dlng/2) * sin($dlng/2);
-    $c = 2 * atan2(sqrt($a), sqrt(1-$a));
-    
-    $R = 6371; // Earth radius in kilometers
-    return $R * $c;
-}
-
-function calculateStandardDeviation($points) {
-    $n = count($points);
-    if ($n < 2) return 0;
-    
-    // Calculate center
-    $center = ['lat' => 0, 'lng' => 0];
-    foreach ($points as $point) {
-        $center['lat'] += $point['lat'];
-        $center['lng'] += $point['lng'];
-    }
-    $center['lat'] /= $n;
-    $center['lng'] /= $n;
-    
-    // Calculate variance
-    $variance = 0;
-    foreach ($points as $point) {
-        $dist = calculateDistance($point, $center);
-        $variance += $dist * $dist;
-    }
-    
-    return sqrt($variance / $n);
+/**
+ * Debug function (hanya untuk development)
+ */
+function debug($data, $die = false) {
+    echo '<pre style="background: #f4f4f4; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #ddd;">';
+    print_r($data);
+    echo '</pre>';
+    if ($die) die();
 }
 ?>
