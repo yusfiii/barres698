@@ -261,20 +261,24 @@ include __DIR__ . '/../../includes/sidebar.php';
             color: #1A1A1A;
         }
 
-        .btn-success-custom {
-            background: rgba(40, 167, 69, 0.1);
-            border: 1px solid rgba(40, 167, 69, 0.3);
+        .btn-pdf-custom {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3);
             padding: 10px 20px;
             border-radius: 12px;
             font-weight: 600;
             font-size: 13px;
-            color: #28a745;
+            color: #dc3545;
             transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .btn-success-custom:hover {
-            background: rgba(40, 167, 69, 0.2);
-            color: #28a745;
+        .btn-pdf-custom:hover {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
         }
 
         /* Preview Container untuk A4 */
@@ -649,9 +653,9 @@ include __DIR__ . '/../../includes/sidebar.php';
                             <i class="fas fa-eye"></i> Preview
                         </button>
                         <?php if ($kejadian): ?>
-                            <button type="button" onclick="window.print()" class="btn-success-custom">
-                                <i class="fas fa-print"></i> Cetak / PDF
-                            </button>
+                            <a href="cetak-pdf-kejadian.php?id=<?= $kejadian['id'] ?>" target="_blank" class="btn-pdf-custom">
+                                <i class="fas fa-file-pdf"></i> Cetak PDF
+                            </a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -778,14 +782,6 @@ include __DIR__ . '/../../includes/sidebar.php';
         document.addEventListener('click', function() {
             document.getElementById('dropdownMenu').classList.remove('show');
         });
-
-        <?php if (isset($_GET['print']) && $_GET['print'] == 1): ?>
-            window.onload = function() {
-                setTimeout(function() {
-                    window.print();
-                }, 800);
-            }
-        <?php endif; ?>
     </script>
 </body>
 
